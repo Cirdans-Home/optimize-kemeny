@@ -47,8 +47,12 @@ Knew = trace( (I - (P+Delta) + e*h')\I ) - 1;
 [pinew,~] = eigs((P+Delta)',1,'largestabs');
 pinew = pinew/sum(pinew);
 
+% Compute Kirkland bound
+klb = kirkland_bound(pi);
+
 fprintf("Value of Kemeny's constant decreased from %1.3f to %1.3f\n",...
     K,Knew)
+fprintf("Kirkland bound: %1.2f\n",klb);
 fprintf("Frobenius norm of the perturbation: %1.3e\n",norm(Delta,"fro"));
 fprintf("Infinity norm difference of the steady state: %1.2e\n",norm(pi-pinew,"inf"));
 
