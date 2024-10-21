@@ -2,58 +2,55 @@
 
 clear; clc; close all;
 
-% Generate Markov-Chain
-m = 30;
-pi = ones(m,1)*eps;
-while any(abs(pi) < 10*eps)
-    %P = rand(m,m);
-    P = sprand(m,m,0.20);
-    D = diag(sum(P,2));
-    P = D\P;
-    
-    % Compute stationary vector
-    try
-        [pi,~] = eigs(P',1,'largestabs');
-        pi = pi/sum(pi);
-    catch
-        pi = ones(m,1)*eps;
-    end
-end
+addpath('../utils');
 
-% Inizialize auxiliary quantities
+%% Generate Markov-Chain
+m = 20;
+Q = rand(m,m);
+D = diag(sum(Q,2));
+Q = D\Q;
+% Compute stationary vector
+[pi,~] = eigs(Q',1,'largestabs');
+pi = pi/sum(pi);
+% Make the chain reversible
+P = reversible_markov_chain(Q,pi,'barker');
+
+%% Inizialize auxiliary quantities
 n = size(P,1);
 e = ones(n,1);
 I = speye(n,n);
 
-% Compute Original Kemeny's Constant
+%% Compute Original Kemeny's Constant
 K = trace( (I - P + e*pi')\I ) - 1;
 
-% Matrix of equality constraint
-Aeq = kron(e',I);
-beq = zeros(n,1);
-h = rand(n,1);
-h = h./sum(h);
-%% Inequality constraints can be expressed as lower-bounds
-lb = - full(P(:)) + eps;
+%% Matrix of equality constraint
+Dpi = spdiags(pi,0,n,n);
+T   = build_sparse_T(n);
+Aeq = [kron(e',I);kron(I,pi');kron(I,Dpi) - kron(Dpi,I)*T];
+beq = [zeros(n,1);zeros(n,1);zeros(n^2,1)];
+% Inequality constraints can be expressed as lower-bounds
+lb = - P(:);
 options = optimoptions('fmincon','Algorithm','interior-point',...
     'SpecifyObjectiveGradient',true,...
     'HessianApproximation','lbfgs',...
-    'Display','iter','HonorBounds',false,'AlwaysHonorConstraints','bounds');
+    'Display','iter');
+h = rand(n,1);
+h = h./sum(h);
 x = zeros(n^2,1);
-feas = zeros(size(x)); % assumes x0 is the initial point
-x = linprog(feas,[],[],Aeq,beq,lb,[]);
-
 objfun = @(Delta) objective(Delta,P,h);
-[x,~,~,~,~,grad] = fmincon(objfun,x,[],[],Aeq,beq,lb,[],[],options);
+x = fmincon(objfun,x,[],[],Aeq,beq,lb,[],[],options);
 
-[ff,gg] = objective(x,P,h);
+%% Evaluate the solution
 
 Delta = reshape(x,n,n);
 Knew = trace( (I - (P+Delta) + e*h')\I ) - 1;
+[pinew,~] = eigs((P+Delta)',1,'largestabs');
+pinew = pinew/sum(pinew);
 
 fprintf("Value of Kemeny's constant decreased from %1.3f to %1.3f\n",...
     K,Knew)
 fprintf("Frobenius norm of the perturbation: %1.3e\n",norm(Delta,"fro"));
+fprintf("Infinity norm difference of the steady state: %1.2e\n",norm(pi-pinew,"inf"));
 
 %% Routines for the optimization
 % Implementation of the objective function and gradient (using full
