@@ -99,7 +99,7 @@ I = eye(n,n);
 Delta = reshape(Delta,n,n);
 sqp = sqrt(pi);
 Dp = spdiags(sqp,0,n,n);
-Dpinv = spdiags(sqp,0,n,n);
+Dpinv = spdiags(1./sqp,0,n,n);
 
 L = chol(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
 
@@ -123,7 +123,7 @@ I = eye(n,n);
 Delta = reshape(Delta,n,n);
 sqp = sqrt(pi);
 Dp = spdiags(sqp,0,n,n);
-Dpinv = spdiags(sqp,0,n,n);
+Dpinv = spdiags(1./sqp,0,n,n);
 L = chol(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
 INV1 = L'\(L\I);
 GMAT = INV1*INV1;
