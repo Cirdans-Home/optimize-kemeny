@@ -34,16 +34,39 @@ h = rand(n,1);
 h = h./sum(h);
 x = zeros(n^2,1);
 %% Select implementation of objective and Hessian
+sqp = sqrt(pi);
+S = (sqp./sqp');
 objfun1 = @(Delta) objective(Delta,P,h);
-objfun2 = @(Delta) objective_sym(Delta,P,pi);
+objfun2 = @(Delta) objective_sym(Delta,P,pi,S);
 hess = @(Delta,lambda) assemble_H(Delta,lambda,P,pi);
 %% Launch solver
-options = optimoptions('fmincon','Algorithm','interior-point',...
-    'SpecifyObjectiveGradient',true,...
-    'HessianFcn',hess,...
-    'SubproblemAlgorithm','ldl-factorization',...
-    'Display','iter-detailed');
-x = fmincon(objfun2,x,[],[],Aeq,beq,lb,[],[],options);
+selecthessian = input("Hessian:\n1)BFGS\n2)LBFGS\n3)Closed form\nSelection = ");
+if ~ ismember(selecthessian,[1,2,3])
+    selecthessian = 2;
+end
+switch selecthessian
+    case 1
+        options = optimoptions('fmincon','Algorithm','interior-point',...
+            'SpecifyObjectiveGradient',true,...
+            'HessianApproximation','bfgs',...
+            'SubproblemAlgorithm','ldl-factorization',...
+            'Display','iter-detailed','Diagnostics','on',...
+            'EnableFeasibilityMode',true,'ScaleProblem',true);
+    case 2
+        options = optimoptions('fmincon','Algorithm','interior-point',...
+            'SpecifyObjectiveGradient',true,...
+            'HessianApproximation','lbfgs',...
+            'SubproblemAlgorithm','factorization',...
+            'Display','iter-detailed','Diagnostics','on');%,...
+        %'EnableFeasibilityMode',true,'ScaleProblem',true);
+    case 3
+        options = optimoptions('fmincon','Algorithm','interior-point',...
+            'SpecifyObjectiveGradient',true,...
+            'HessianFcn',hess,...
+            'SubproblemAlgorithm','ldl-factorization',...
+            'Display','iter-detailed');
+end
+[x,~,~,output] = fmincon(objfun2,x,[],[],Aeq,beq,lb,[],[],options);
 
 %% Evaluate the solution
 
@@ -60,6 +83,9 @@ fprintf("Value of Kemeny's constant decreased from %1.3f to %1.3f\n",...
 fprintf("Kirkland bound: %1.2f\n",klb);
 fprintf("Frobenius norm of the perturbation: %1.3e\n",norm(Delta,"fro"));
 fprintf("Infinity norm difference of the steady state: %1.2e\n",norm(pi-pinew,"inf"));
+
+%%
+H = assemble_H2(Delta(:),0,P,pi);
 
 %% Routines for the optimization
 % Implementation of the objective function and gradient (using full
@@ -89,7 +115,7 @@ end
 
 end
 
-function [f,g] = objective_sym(Delta,P,pi)
+function [f,g] = objective_sym(Delta,P,pi,S)
 %%OBJECTIVE Objective function containing Kemeny constant for a dense
 % Markov chain.
 
@@ -109,7 +135,7 @@ f = trace( INV1 ) + 0.5*norm(Delta,"fro")^2;
 
 if nargout > 1
     % Compute the gradient if it is requested
-    Gmat = transpose(INV1*INV1);
+    Gmat = S.*transpose(INV1*INV1);
     g = Gmat(:) + Delta(:);
 end
 
@@ -124,8 +150,8 @@ Delta = reshape(Delta,n,n);
 sqp = sqrt(pi);
 Dp = spdiags(sqp,0,n,n);
 Dpinv = spdiags(1./sqp,0,n,n);
-L = chol(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
-INV1 = L'\(L\I);
+[L,U] = lu(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
+INV1 = U\(L\I);
 GMAT = INV1*INV1;
 
 % Define the dimension n
@@ -133,26 +159,20 @@ n = size(INV1, 1);
 H = zeros(n^2, n^2);  % Initialize the matrix H of size n^2 x n^2
 
 % Nested loops to fill the H matrix
-for i = 1:n
-    for j = 1:n
-        for h = 1:n
-            for k = 1:n
-                % Compute indices for H in terms of (i,j) and (h,k)
-                rowIdx = (j-1) * n + i;  % Corresponds to (i,j)
-                colIdx = (k-1) * n + h;  % Corresponds to (h,k)                
-                term1 = INV1(j, h); % Compute e_j' * INV1 * e_h          
+for j=1:n
+    for i=1:n
+        d = zeros(n,n);
+        for k=1:n
+            for h = 1:n
+                term1 = INV1(j, h); % Compute e_j' * INV1 * e_h
                 term2 = GMAT(k, i); % Compute e_k' * GMAT * e_i
                 term3 = GMAT(j, h); % Compute e_j' * GMAT * e_h
                 term4 = INV1(k, i); % Compute e_k' * INV1 * e_i
-                % Compute H_{ij,hk}
-                H(rowIdx, colIdx) = -term1 * term2 - term3 * term4;
-                if rowIdx == colIdx
-                    % Add the second derivative of 0.5 || \Delta \\_F^2
-                    % only on the diagonal
-                    H(rowIdx, colIdx) = H(rowIdx, colIdx) + 1;
-                end
+                d(h,k) = (sqp(i)/sqp(j))*...
+                    (sqp(h)/sqp(k))*(term1 * term2 + term3 * term4);
             end
         end
+        H((n*(i-1)+1):n*i,(n*(j-1)+1):n*j) = d + I(:,i)*I(j,:);
     end
 end
 end
