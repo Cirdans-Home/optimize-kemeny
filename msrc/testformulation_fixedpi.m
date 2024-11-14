@@ -84,9 +84,6 @@ fprintf("Kirkland bound: %1.2f\n",klb);
 fprintf("Frobenius norm of the perturbation: %1.3e\n",norm(Delta,"fro"));
 fprintf("Infinity norm difference of the steady state: %1.2e\n",norm(pi-pinew,"inf"));
 
-%%
-H = assemble_H2(Delta(:),0,P,pi);
-
 %% Routines for the optimization
 % Implementation of the objective function and gradient (using full
 % evaluation of Kemeny's Constant)
@@ -150,8 +147,8 @@ Delta = reshape(Delta,n,n);
 sqp = sqrt(pi);
 Dp = spdiags(sqp,0,n,n);
 Dpinv = spdiags(1./sqp,0,n,n);
-[L,U] = lu(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
-INV1 = U\(L\I);
+L = chol(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
+INV1 = L'\(L\I);
 GMAT = INV1*INV1;
 
 % Define the dimension n
