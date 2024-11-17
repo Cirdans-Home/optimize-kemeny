@@ -13,7 +13,20 @@ Q = D\Q;
 [pi,~] = eigs(Q',1,'largestabs');
 pi = pi/sum(pi);
 % Make the chain reversible
-P = reversible_markov_chain(Q,pi,'barker');
+chaintype = input('Select Chain type\n1)Barker\n2)Metropolis-Hastings\n Chaintype = ');
+if ~ ismember(chaintype,[1,2])
+    chaintype = 1;
+end
+switch chaintype
+    case 1
+        fprintf("Selected 'barker'-type chain.\n")
+        P = reversible_markov_chain(Q,pi,'barker');
+    case 2
+        fprintf("Selected 'metropolisì'-type chain.\n")
+        P = reversible_markov_chain(Q,pi,'metropolis');
+end
+
+
 
 %% Inizialize auxiliary quantities
 n = size(P,1);
@@ -40,8 +53,8 @@ objfun1 = @(Delta) objective(Delta,P,h);
 objfun2 = @(Delta) objective_sym(Delta,P,pi,S);
 hess = @(Delta,lambda) assemble_H(Delta,lambda,P,pi);
 %% Launch solver
-selecthessian = input("Hessian:\n1)BFGS\n2)LBFGS\n3)Closed form\nSelection = ");
-if ~ ismember(selecthessian,[1,2,3])
+selecthessian = input("Hessian and Algorithm:\n1)BFGS\n2)LBFGS\n3)Closed form\n4)SQP\nSelection = ");
+if ~ ismember(selecthessian,[1,2,3,4])
     selecthessian = 2;
 end
 switch selecthessian
@@ -57,13 +70,17 @@ switch selecthessian
             'SpecifyObjectiveGradient',true,...
             'HessianApproximation','lbfgs',...
             'SubproblemAlgorithm','factorization',...
-            'Display','iter-detailed','Diagnostics','on');%,...
-        %'EnableFeasibilityMode',true,'ScaleProblem',true);
+            'Display','iter-detailed','Diagnostics','on',...
+            'EnableFeasibilityMode',true,'ScaleProblem',true);
     case 3
         options = optimoptions('fmincon','Algorithm','interior-point',...
             'SpecifyObjectiveGradient',true,...
             'HessianFcn',hess,...
-            'SubproblemAlgorithm','ldl-factorization',...
+            'SubproblemAlgorithm','factorization',...
+            'Display','iter-detailed');
+    case 4
+        options = optimoptions('fmincon','Algorithm','sqp',...
+            'SpecifyObjectiveGradient',true,...
             'Display','iter-detailed');
 end
 [x,~,~,output] = fmincon(objfun2,x,[],[],Aeq,beq,lb,[],[],options);
@@ -124,7 +141,8 @@ sqp = sqrt(pi);
 Dp = spdiags(sqp,0,n,n);
 Dpinv = spdiags(1./sqp,0,n,n);
 
-L = chol(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
+Q = I - Dp*(P+Delta)*Dpinv + sqp*sqp';
+L = chol(Q);
 
 INV1 = L'\(L\I);
 
@@ -156,20 +174,23 @@ n = size(INV1, 1);
 H = zeros(n^2, n^2);  % Initialize the matrix H of size n^2 x n^2
 
 % Nested loops to fill the H matrix
-for j=1:n
-    for i=1:n
-        d = zeros(n,n);
-        for k=1:n
-            for h = 1:n
-                term1 = INV1(j, h); % Compute e_j' * INV1 * e_h
-                term2 = GMAT(k, i); % Compute e_k' * GMAT * e_i
-                term3 = GMAT(j, h); % Compute e_j' * GMAT * e_h
-                term4 = INV1(k, i); % Compute e_k' * INV1 * e_i
-                d(h,k) = (sqp(i)/sqp(j))*...
+for i=1:n
+    for j=1:n
+        p = i + (j-1)*n;
+        for h=1:n
+            for k=1:n
+                q = h + (k-1)*n;
+                term1 = INV1(j, k); % Compute e_j' * INV1 * e_h
+                term2 = GMAT(h, i); % Compute e_k' * GMAT * e_i
+                term3 = GMAT(j, k); % Compute e_j' * GMAT * e_h
+                term4 = INV1(h, i); % Compute e_k' * INV1 * e_i
+                H(p,q) = (sqp(i)/sqp(j))*...
                     (sqp(h)/sqp(k))*(term1 * term2 + term3 * term4);
             end
         end
-        H((n*(i-1)+1):n*i,(n*(j-1)+1):n*j) = d + I(:,i)*I(j,:);
     end
 end
+
+H = H + speye(n^2,n^2);
+
 end
