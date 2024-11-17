@@ -3,6 +3,7 @@
 clear; clc; close all;
 
 addpath('../utils');
+addpath('mex');
 
 %% Generate Markov-Chain
 m = 50;
@@ -51,7 +52,16 @@ sqp = sqrt(pi);
 S = (sqp./sqp');
 objfun1 = @(Delta) objective(Delta,P,h);
 objfun2 = @(Delta) objective_sym(Delta,P,pi,S);
-hess = @(Delta,lambda) assemble_H(Delta,lambda,P,pi);
+
+if exist('assemble_hessian.mexa64','file') == 3
+    fprintf("Found Hessian mex file implementation.\n")
+    hess = @(Delta,lambda) assemble_H_mex(Delta,lambda,P,pi);
+else
+    fprintf("Using purely MATLAB Hessian.\n")
+    hess = @(Delta,lambda) assemble_H(Delta,lambda,P,pi);
+end
+
+
 %% Launch solver
 selecthessian = input("Hessian and Algorithm:\n1)BFGS\n2)LBFGS\n3)Closed form\n4)SQP\nSelection = ");
 if ~ ismember(selecthessian,[1,2,3,4])
@@ -192,5 +202,25 @@ for i=1:n
 end
 
 H = H + speye(n^2,n^2);
+
+end
+
+function H = assemble_H_mex(Delta,lambda,P,pi)
+%ASSEMBLE_H builds the Hessian for the Kemeny's constant function
+
+n = size(P,1);
+I = eye(n,n);
+Delta = reshape(Delta,n,n);
+sqp = sqrt(pi);
+Dp = spdiags(sqp,0,n,n);
+Dpinv = spdiags(1./sqp,0,n,n);
+L = chol(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
+INV1 = L'\(L\I);
+GMAT = INV1*INV1;
+
+% Define the dimension n
+n = size(INV1, 1);
+
+H = assemble_hessian(INV1,GMAT,n);
 
 end
