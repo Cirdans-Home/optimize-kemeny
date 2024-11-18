@@ -19,7 +19,7 @@ Kvalkirk  = NaN(nsizes,nrepetition);
 PNorm     = NaN(nsizes,nrepetition);
 
 i = 1;
-for n = nsizes
+for n = nsize
     fprintf('|----------------------------------------------------------|\n')
     fprintf(['| Problem Size %04d                                    ' ...
         '    |\n'],n)
@@ -44,7 +44,6 @@ for n = nsizes
             'verbose','iter');
         DeltaNorm(i,rep) = norm(Delta,"fro");
         PNorm(i,rep) = norm(P,"fro");
-        pause()
     end
     i = i+1;
 end
