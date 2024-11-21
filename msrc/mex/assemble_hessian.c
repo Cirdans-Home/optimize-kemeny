@@ -3,7 +3,7 @@
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // Check for proper number of arguments
-    if (nrhs != 3) {
+    if (nrhs != 4) {
         mexErrMsgIdAndTxt("MATLAB:assemble_hessian:invalidNumInputs", "Three inputs required.");
     }
     if (nlhs > 1) {
@@ -14,6 +14,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     double *INV1 = mxGetPr(prhs[0]);
     double *GMAT = mxGetPr(prhs[1]);
     int n = (int) mxGetScalar(prhs[2]);
+    double *sqp = mxGetPr(prhs[3]);
 
     // Create the output matrix
     mwSize dims[2] = {n*n, n*n};
@@ -36,7 +37,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                     term2 = GMAT[h + i * n]; // Compute e_k' * GMAT * e_i
                     term3 = GMAT[j + k * n]; // Compute e_j' * GMAT * e_h
                     term4 = INV1[h + i * n]; // Compute e_k' * INV1 * e_i
-                    H[p + q * n * n] = (term1 * term2 + term3 * term4);
+                    H[p + q * n * n] = (sqp[i]/sqp[j])*(sqp[h]/sqp[k])*(term1 * term2 + term3 * term4);
                 }
             }
         }

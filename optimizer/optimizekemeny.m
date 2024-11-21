@@ -376,7 +376,7 @@ GMAT = INV1*INV1;
 % Define the dimension n
 n = size(INV1, 1);
 
-H = assemble_hessian(INV1,GMAT,n);
+H = assemble_hessian(INV1,GMAT,n,sqp);
 
 end
 
