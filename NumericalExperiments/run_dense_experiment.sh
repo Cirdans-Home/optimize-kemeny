@@ -10,5 +10,7 @@ module purge
 module load gcc/13.2.0 matlab
 module list
 
+export OMP_NUM_THREADS=256
+
 matlab -batch "dense_experiment"
 
