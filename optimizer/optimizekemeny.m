@@ -184,11 +184,16 @@ function Delta = preserving_solver(P,pi,verbose)
 %matrix and that the original stationary vector has to be preserved
 % Inizialize auxiliary quantities
 n = size(P,1);
-if n > 50
-    solver = 'cg';
+%if n > 50
+%    solver = 'cg';
+%else
+solver = 'ldl-factorization';
+if n < 100
+	InitBarrierParam = 0.1;
 else
-    solver = 'ldl-factorization';
+	InitBarrierParam = 0.5;
 end
+%end
 e = ones(n,1);
 I = speye(n,n);
 % Matrix of equality constraint
@@ -209,6 +214,7 @@ options = optimoptions('fmincon','Algorithm','interior-point',...
     'SpecifyObjectiveGradient',true,...
     'HessianFcn',hess,...
     'SubproblemAlgorithm',solver,...
+    'InitBarrierParam',InitBarrierParam,...
     'Display',verbose);
 x = zeros(n^2,1);
 sqp = sqrt(pi);
