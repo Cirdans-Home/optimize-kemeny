@@ -8,7 +8,7 @@ addpath('../optimizer/')
 addpath('../msrc/mex/')
 addpath('../utils/')
 
-nsize       = [10,50,100,250,500];
+nsize       = 120;%[10,50,100,250,500];
 nsizes      = length(nsize);
 nrepetition = 10;
 
@@ -25,7 +25,7 @@ for n = nsize
         '    |\n'],n)
     fprintf('|----------------------------------------------------------|\n')
     for rep = 1:nrepetition
-        try
+        %try
             % Generate problem
             Q = rand(n,n);
             D = diag(sum(Q,2));
@@ -48,13 +48,13 @@ for n = nsize
             % We save the result on file for post-processing
             save("dense_experiment.mat","PNorm","DeltaNorm","Kvalopt", ...
                 "Kval","Kvalkirk","nsize","nrepetition")
-        catch
-            fprintf('!! Failed at size %d repetition %d\n',n,rep);
-            Kval(i,rep) = NaN;
-            Kvalkirk(i,rep) = NaN;
-            DeltaNorm(i,rep) = NaN;
-            PNorm(i,rep) = NaN;
-        end
+        %catch
+        %    fprintf('!! Failed at size %d repetition %d\n',n,rep);
+        %    Kval(i,rep) = NaN;
+        %    Kvalkirk(i,rep) = NaN;
+        %    DeltaNorm(i,rep) = NaN;
+        %    PNorm(i,rep) = NaN;
+        %end
     end
     i = i+1;
 end

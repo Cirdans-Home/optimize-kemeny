@@ -11,34 +11,34 @@ function [Delta,varargout] = optimizekemeny(P,varargin)
 %       Type: String
 %       Default: 'Unstructured'
 %       Valid Options: 'Unstructured', 'Preserving', 'Sparse', 'SparsePreserving'
-%       Description: Specifies the type of operation or structure to be 
+%       Description: Specifies the type of operation or structure to be
 %       applied in the optimization. It can take one of the valid options listed
 %       above, each corresponding to different processing types:
 %           - 'Unstructured' assumes that P is dense and minimize Kemeny's
-%           constant. 
+%           constant.
 %           - 'Preserving' assumes that P is sparse and that we want to
 %           preserve the stationary vector, that has to be passed to the
 %           routine (see next)
 %           - 'Sparse' assumes that P is sparse and minimize Kemeny's
-%           constant with an assigned sparsity pattern (see next). 
+%           constant with an assigned sparsity pattern (see next).
 %           - 'SparsePreserving' assumes that P is sparse and that we want
 %           to preserve the stationary vector, that has to be passed to the
-%           routine (see next). It minimizes Kemeny's constant with an 
-%           assigned sparsity pattern (see next). 
+%           routine (see next). It minimizes Kemeny's constant with an
+%           assigned sparsity pattern (see next).
 %
 %   stationary (Optional)
 %       Type: Numeric vector (size [size(P,1), 1])
 %       Default: NaN(size(P,1),1)
-%       Description: A numeric vector, which by default is a vector of NaN 
-%       values with the same number of rows as P. It represent the 
+%       Description: A numeric vector, which by default is a vector of NaN
+%       values with the same number of rows as P. It represent the
 %       stationary vector of the Markov chain (is used only with types
 %       'Preserving' and 'SparsePreserving'.
 %
 %   pattern (Optional)
 %       Type: Sparse matrix
-%       Default: spones(P) (sparse matrix with ones in the same non-zero 
+%       Default: spones(P) (sparse matrix with ones in the same non-zero
 %       positions as P)
-%       Description: A sparse matrix pattern based on the input matrix P. By 
+%       Description: A sparse matrix pattern based on the input matrix P. By
 %       default, it is derived from P using spones(P), which creates a sparse
 %       matrix with ones in place of non-zero elements of P.
 %
@@ -53,12 +53,12 @@ function [Delta,varargout] = optimizekemeny(P,varargin)
 %       Default: 'final'
 %       Valid Options: 'final', 'iter'
 %       Description: Controls the level of verbosity or output during function
-%       execution. The options allow for final output only ('final') or iterative 
+%       execution. The options allow for final output only ('final') or iterative
 %       output ('iter') depending on the level of detail required.
 %
 % Validations:
 %   - P must be numeric.
-%   - type must be one of 'Unstructured', 'Preserving', 'Sparse', or 
+%   - type must be one of 'Unstructured', 'Preserving', 'Sparse', or
 %     'SparsePreserving'.
 %   - stationary must be numeric and of size [size(P,1), 1].
 %   - pattern must be a sparse matrix.
@@ -68,7 +68,7 @@ function [Delta,varargout] = optimizekemeny(P,varargin)
 
 %% Create input parser
 p = inputParser;
-validType = {'Unstructured','Preserving','Sparse','SparsePreserving'};
+validType = {'Unstructured','Preserving','SparsePreserving'};
 defaultType = 'Unstructured';
 checkType = @(x) any(validatestring(x,validType));
 validVerbose = {'final','iter'};
@@ -85,7 +85,7 @@ parse(p,P,varargin{:});
 
 %% Chek P
 if size(P,1) ~= size(P,2)
-   error('OptimizeKemeny needs a square matrix');
+    error('OptimizeKemeny needs a square matrix');
 end
 if norm(sum(P,2) - 1,"inf") > 1e-14
     error('OptimizeKemeny needs a row-stochastic matrix');
@@ -121,23 +121,23 @@ switch upper(p.Results.type)
             pi = p.Results.stationary;
         end
         Delta = preserving_solver(P,pi,p.Results.verbose);
-    case 'SPARSE'
+    case 'SPARSEPRESERVING'
         % Solver for obtaining a sparse perturbation without preservation
         % of the stationary vector
-        if abs(sum(p.Results.h) - 1) > 10*eps
-            h = p.Results.h./sum(p.Results.h);
+        if abs(sum(p.Results.stationary) - 1) > 10*eps
+            pi = p.Results.stationary./sum(p.Results.stationary);
         else
-            h = p.Results.h;
+            pi = p.Results.stationary;
         end
         if size(p.Results.pattern,1) ~= size(p.Results.pattern,1) || ...
                 any(size(p.Results.pattern) ~= size(P))
             error("OptimizeKemeny: the pattern is either rectangular or has wrong dimension");
         end
-        Delta = sparse_solver(P,p.Results.pattern,h,p.Results.verbose);
-    case 'SPARSEPRESERVING'
-        
+        Delta = sparse_solver(P,p.Results.pattern,pi,p.Results.verbose);
+    otherwise
+        error("OptimizeKemeny: unknown formulation! %s",p.Results.type)
 end
-    
+
 if nargout == 2
     % The new Kemeny constant value has been requested:
     n = size(P,1);
@@ -189,9 +189,9 @@ n = size(P,1);
 %else
 solver = 'ldl-factorization';
 if n < 100
-	InitBarrierParam = 0.1;
+    InitBarrierParam = 0.1;
 else
-	InitBarrierParam = 0.5;
+    InitBarrierParam = 0.5;
 end
 %end
 e = ones(n,1);
@@ -224,7 +224,7 @@ x = fmincon(objfun,x,[],[],Aeq,beq,lb,[],[],options);
 Delta = reshape(x,n,n);
 end
 
-function Delta = sparse_solver(P,S,h,verbose)
+function Delta = sparse_solver(P,S,pi,verbose)
 %%UNSTRUCTURED_SOLVER Solve the optimization problem assuming P a sparse
 %matrix and that there is a restricted pattern on which we wish to solve
 
@@ -236,17 +236,25 @@ I = speye(n,n);
 % Build pattern index
 [ival,jval] = find(S);
 % Matrix of equality constraint
-[proj] = pattern_projector(S);
-Aeq = kron(e',I)*proj'; 
-beq = zeros(n,1);
+proj = pattern_projector(S);
+% Matrix of equality constraint
+Dpi = spdiags(pi,0,n,n);
+T   = build_sparse_T(n);
+Aeq = [kron(e',I);kron(I,pi');kron(I,Dpi) - kron(Dpi,I)*T]*proj';
+beq = [zeros(n,1);zeros(n,1);zeros(n^2,1)];
 % Inequality constraints can be expressed as lower-bounds
-lb = - proj*P(:);
+lb = - full(proj*P(:));
+% Hessian selection
+fprintf("Using purely MATLAB Hessian.\n")
+hess = @(Delta,lambda) assemble_H_sparse(Delta,lambda,P,pi,ival,jval);
 options = optimoptions('fmincon','Algorithm','interior-point',...
     'SpecifyObjectiveGradient',true,...
-    'HessianApproximation','lbfgs',...
+    'HessianFcn',hess,... 'HessianApproximation','lbfgs',...
     'Display',verbose);
-x = zeros(m,1);
-objfun = @(Delta) objective_sparse(Delta,P,h,ival,jval);
+x = eps*ones(m,1);
+sqp = sqrt(pi);
+S = (sqp./sqp');
+objfun = @(Delta) objective_sym_sparse(Delta,P,pi,S,ival,jval,proj);
 x = fmincon(objfun,x,[],[],Aeq,beq,lb,[],[],options);
 Delta = sparse(ival,jval,x,n,n);
 end
@@ -278,25 +286,6 @@ end
 
 end
 
-function [f,g] = objective_sparse(Delta,P,h,ival,jval)
-%%OBJECTIVE Objective function containing Kemeny constant for a dense
-% Markov chain.
-n = size(P,1);
-I = eye(n,n);
-e = ones(n,1);
-
-Deltamat = sparse(ival,jval,Delta,n,n);
-[L,U] = lu(I - (P+Deltamat) + e*h');
-INV1 = U\(L\I);
-f = trace( INV1 ) + 0.5*norm(Delta,"fro")^2;
-if nargout > 1
-    % Compute the gradient if it is requested
-    Gmat = INV1*INV1;
-    index = sub2ind([n,n],ival,jval);
-    g = Gmat(index) + Delta;
-end
-end
-
 function [f,g] = objective_sym(Delta,P,pi,S)
 %%OBJECTIVE Objective function containing Kemeny constant for a dense
 % Markov chain.
@@ -324,10 +313,37 @@ end
 
 end
 
+function [f,g] = objective_sym_sparse(Delta,P,pi,S,ival,jval,proj)
+%%OBJECTIVE Objective function containing Kemeny constant for a sparse
+% Markov chain.
+
+n = size(P,1);
+I = eye(n,n);
+
+DeltaMat = sparse(ival,jval,Delta,n,n);
+sqp = sqrt(pi);
+Dp = spdiags(sqp,0,n,n);
+Dpinv = spdiags(1./sqp,0,n,n);
+
+Q = I - Dp*(P+DeltaMat)*Dpinv + sqp*sqp';
+L = chol(Q);
+
+INV1 = L'\(L\I);
+
+f = trace( INV1 ) + 0.5*norm(Delta,"fro")^2;
+
+if nargout > 1
+    % Compute the gradient if it is requested
+    Gmat = S.*transpose(INV1*INV1);
+    g = proj*Gmat(:) + Delta(:); % Project the entries of the full gradient
+end
+
+end
+
 %% Hessian Computation
 % These routines implement the computation of the Hessian matrix for the
 % optimization problem
-function H = assemble_H(Delta,lambda,P,pi)
+function H = assemble_H(Delta,~,P,pi)
 %ASSEMBLE_H builds the Hessian for the Kemeny's constant function
 
 n = size(P,1);
@@ -366,7 +382,7 @@ H = H + speye(n^2,n^2);
 
 end
 
-function H = assemble_H_mex(Delta,lambda,P,pi)
+function H = assemble_H_mex(Delta,~,P,pi)
 %ASSEMBLE_H builds the Hessian for the Kemeny's constant function
 
 n = size(P,1);
@@ -383,6 +399,54 @@ GMAT = INV1*INV1;
 n = size(INV1, 1);
 
 H = assemble_hessian(INV1,GMAT,n,sqp);
+
+end
+
+function H = assemble_H_sparse(Delta,~,P,pi,irow,jcol)
+%ASSEMBLE_H builds the Hessian for the Kemeny's constant function
+
+m = length(irow);
+n = size(P,1);
+I = eye(n,n);
+Delta = sparse(irow,jcol,Delta,n,n);
+sqp = sqrt(pi);
+Dp = spdiags(sqp,0,n,n);
+Dpinv = spdiags(1./sqp,0,n,n);
+L = chol(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
+INV1 = L'\(L\I);
+GMAT = INV1*INV1;
+
+% Define the dimension n
+H = zeros(m, m);  % Initialize the matrix H of size m x m
+
+% Nested loops to fill the H matrix
+p = 1;
+q = 1;
+for i=1:n
+    for j=1:n
+        if Delta(i,j) ~= 0
+            q = 1;
+
+            for h=1:n
+                for k=1:n
+                    if Delta(h,k) ~= 0
+                        term1 = INV1(j, k); % Compute e_j' * INV1 * e_h
+                        term2 = GMAT(h, i); % Compute e_k' * GMAT * e_i
+                        term3 = GMAT(j, k); % Compute e_j' * GMAT * e_h
+                        term4 = INV1(h, i); % Compute e_k' * INV1 * e_i
+                        H(p,q) = (sqp(i)/sqp(j))*...
+                            (sqp(h)/sqp(k))*(term1 * term2 + term3 * term4);
+                        q = q + 1;
+                    end
+                end
+            end
+            p = p + 1;
+        end
+
+    end
+end
+
+H = H + speye(m,m);
 
 end
 
@@ -412,7 +476,7 @@ for i = 1:n
         % Linear index for element (i, j) in matrix P(:)
         row = (j - 1) * n + i;
         % Linear index for element (i, j) in matrix reshape(P',n^2,1)
-        col = (i - 1) * n + j;      
+        col = (i - 1) * n + j;
         % Store indices in sparse matrix
         row_idx(row) = row;
         col_idx(row) = col;
