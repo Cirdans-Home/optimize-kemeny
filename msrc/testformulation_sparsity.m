@@ -6,8 +6,8 @@ addpath('../utils');
 addpath('mex');
 
 % Generate Random Reversible (sparse) Chain
-n = 60;
-p = 0.05;
+n = 80;
+p = 0.03;
 A = sprand(n,n,p);
 A = spones(A+A');
 D = spdiags(sum(A,2),0,n,n);
@@ -46,7 +46,7 @@ figure(1)
 subplot(1,3,2)
 hold on
 spy(Delta > 0,'+');
-spy(Delta < 0,'r_');
+spy(Delta < 0,'r.');
 hold off
 xlabel(sprintf("Positive %d Negative %d",nnz(Delta > 0),nnz(Delta < 0)))
 subplot(1,3,3)
