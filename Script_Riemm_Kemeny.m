@@ -1,8 +1,8 @@
 %Script for minimizing the Kemeny constant over reversible matrices
 
-clear all; close all; clc
-rng(105)
-n = 50;
+%clear all; close all; clc
+%rng(105)
+%n = 50;
 
 %initialize the steady vector and its square root (entry-wise)
 pi = rand(n,1); pi = pi/norm(pi,1);
