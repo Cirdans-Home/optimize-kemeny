@@ -6,4 +6,5 @@ of the resulting matrix is ​​smaller than that of the starting matrix. That 
 ## Collaborators
 
 - Fabio Durastante [📧](mailto:fabio.durastante@unipi.it) [🌐](https://fdurastante.github.io/)
+- Miryam Gnazzo [📧](mailto:miryam.gnazzo@dm.unipi.it) 
 - Beatrice Meini [📧](mailto:beatrice.meini@unipi.it) [🌐](https://people.dm.unipi.it/meini/)
