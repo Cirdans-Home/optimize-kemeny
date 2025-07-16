@@ -57,7 +57,7 @@ function [Delta,varargout] = optimizekemeny(P,varargin)
 %       output ('iter') depending on the level of detail required.
 %
 % Validations:
-%   - P must be numeric.
+%   - P must be numeric.l
 %   - type must be one of 'Unstructured', 'Preserving', 'Sparse', or
 %     'SparsePreserving'.
 %   - stationary must be numeric and of size [size(P,1), 1].
@@ -245,17 +245,24 @@ beq = [zeros(n,1);zeros(n,1);zeros(n^2,1)];
 % Inequality constraints can be expressed as lower-bounds
 lb = - full(proj*P(:));
 % Hessian selection
-fprintf("Using purely MATLAB Hessian.\n")
-hess = @(Delta,lambda) assemble_H_sparse(Delta,lambda,P,pi,ival,jval);
+if exist('assemble_hessian_sparse.mexa64','file') == 3
+    fprintf("Found Hessian mex file implementation.\n")
+    hess = @(Delta,lambda) assemble_H_sparse_mex(Delta,lambda,P,pi,ival,jval);
+else
+    fprintf("Using purely MATLAB Hessian.\n")
+    hess = @(Delta,lambda) assemble_H_sparse(Delta,lambda,P,pi,ival,jval);
+end
 options = optimoptions('fmincon','Algorithm','interior-point',...
-    'SpecifyObjectiveGradient',true,...
-    'HessianFcn',hess,... 'HessianApproximation','lbfgs',...
+    'SpecifyObjectiveGradient',true,...  
+    'HessianFcn',hess,... 'HessianApproximation','finite-difference',... 
     'Display',verbose);
 x = eps*ones(m,1);
 sqp = sqrt(pi);
 S = (sqp./sqp');
 objfun = @(Delta) objective_sym_sparse(Delta,P,pi,S,ival,jval,proj);
+
 x = fmincon(objfun,x,[],[],Aeq,beq,lb,[],[],options);
+
 Delta = sparse(ival,jval,x,n,n);
 end
 
@@ -330,7 +337,7 @@ L = chol(Q);
 
 INV1 = L'\(L\I);
 
-f = trace( INV1 ) + 0.5*norm(Delta,"fro")^2;
+f = trace( INV1 ) + 0.5*norm(DeltaMat,"fro")^2;
 
 if nargout > 1
     % Compute the gradient if it is requested
@@ -405,7 +412,6 @@ end
 function H = assemble_H_sparse(Delta,~,P,pi,irow,jcol)
 %ASSEMBLE_H builds the Hessian for the Kemeny's constant function
 
-m = length(irow);
 n = size(P,1);
 I = eye(n,n);
 Delta = sparse(irow,jcol,Delta,n,n);
@@ -417,36 +423,48 @@ INV1 = L'\(L\I);
 GMAT = INV1*INV1;
 
 % Define the dimension n
-H = zeros(m, m);  % Initialize the matrix H of size m x m
+nnzp = nnz(P);
+H = zeros(nnzp, nnzp);  % Initialize the matrix H of size m x m
 
 % Nested loops to fill the H matrix
-p = 1;
-q = 1;
-for i=1:n
-    for j=1:n
-        if Delta(i,j) ~= 0
-            q = 1;
-
-            for h=1:n
-                for k=1:n
-                    if Delta(h,k) ~= 0
-                        term1 = INV1(j, k); % Compute e_j' * INV1 * e_h
-                        term2 = GMAT(h, i); % Compute e_k' * GMAT * e_i
-                        term3 = GMAT(j, k); % Compute e_j' * GMAT * e_h
-                        term4 = INV1(h, i); % Compute e_k' * INV1 * e_i
-                        H(p,q) = (sqp(i)/sqp(j))*...
-                            (sqp(h)/sqp(k))*(term1 * term2 + term3 * term4);
-                        q = q + 1;
-                    end
-                end
-            end
-            p = p + 1;
-        end
-
+for indi = 1:nnzp
+    i = irow(indi);
+    j = jcol(indi);
+    for indj = 1:nnzp
+        h = irow(indj);
+        k = jcol(indj);
+        term1 = INV1(j, k); % Compute e_j' * INV1 * e_h
+        term2 = GMAT(h, i); % Compute e_k' * GMAT * e_i
+        term3 = GMAT(j, k); % Compute e_j' * GMAT * e_h
+        term4 = INV1(h, i); % Compute e_k' * INV1 * e_i
+        H(indi,indj) = (sqp(i)/sqp(j))*...
+            (sqp(h)/sqp(k))*(term1 * term2 + term3 * term4);
     end
 end
 
-H = H + speye(m,m);
+H = H + speye(nnzp,nnzp);
+
+end
+
+function H = assemble_H_sparse_mex(Delta,~,P,pi,irow,jcol)
+%ASSEMBLE_H builds the Hessian for the Kemeny's constant function
+
+n = size(P,1);
+I = eye(n,n);
+Delta = sparse(irow,jcol,Delta,n,n);
+sqp = sqrt(pi);
+Dp = spdiags(sqp,0,n,n);
+Dpinv = spdiags(1./sqp,0,n,n);
+L = chol(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
+INV1 = L'\(L\I);
+GMAT = INV1*INV1;
+
+% Define the dimension n
+nnzp = nnz(P);
+
+% Call the mex function
+H = assemble_hessian_sparse(INV1, GMAT, irow, jcol, sqp, nnzp);
+
 
 end
 

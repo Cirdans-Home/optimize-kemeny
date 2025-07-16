@@ -3,4 +3,10 @@
 % The compile commands are tuned for a Linux machine with GCC. If you use
 % something different, you'll have to fix it for your case.
 
+clear; clc; close all;
+
+% Compile assembly of Hessian for dense problem
 mex -R2018a CFLAGS='$CFLAGS -fopenmp' LDFLAGS='$LDFLAGS -fopenmp' COPTIMFLAGS='$COPTIMFLAGS -fopenmp -O3' LDOPTIMFLAGS='$LDOPTIMFLAGS -fopenmp -O3' DEFINES='$DEFINES -fopenmp' assemble_hessian.c
+
+% Compile assembly of Hessian for sparse problem
+mex -R2018a CFLAGS='$CFLAGS -fopenmp' LDFLAGS='$LDFLAGS -fopenmp' COPTIMFLAGS='$COPTIMFLAGS -fopenmp -O3' LDOPTIMFLAGS='$LDOPTIMFLAGS -fopenmp -O3' DEFINES='$DEFINES -fopenmp' assemble_hessian_sparse.c
