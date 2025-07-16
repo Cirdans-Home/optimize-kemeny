@@ -5,3 +5,4 @@ This folder contains the implementation of some routines as mex files in C in or
 | **File** | |
 |------|-|
 | assemble_hessian.c | Routine that uses OpenMP accelerations of some loops for the assembly of the Hessian matrix in the dense case. |
+| assemble_hessian_sparse.c | Routine that uses OpenMP accelerations of some loops for the assembly of the Hessian matrix in the sparse case. |
