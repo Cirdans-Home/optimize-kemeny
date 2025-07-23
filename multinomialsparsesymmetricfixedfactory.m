@@ -129,27 +129,15 @@ M.retr = @retraction;
        if nargin < 3
            t = 1.0;
        end
-
-        %nnz_X = X(index);
-        %if any(nnz_X(:)<0)
-         %   keyboard
-            %t = 1.0;
-        %end
       
        XX = X;
        XX(XX==0) = 1;
-
        Y = X.*exp(t*(eta./XX));
        Y = Y.*S;
 
-        %if (min(diag(Y))<=1e-12)
-         % keyboard
-        %end
-
-    %  keyboard
     %  Y = X + t*eta;
-    %  Y = max(Y, 1e-30); % For numerical stability;
-    %  Y = Y.*S;
+     Y = max(Y, 1e-17); % For numerical stability;
+     Y = Y.*S;
 
     %Retraction con double_stoch_general di manopt
     Yr = diag(pv)*Y*diag(pv);
@@ -158,11 +146,6 @@ M.retr = @retraction;
      Y = diag(u)*Y*diag(v);
      Y = Y.*S;
      Y = 0.5*(Y + Y');
-
-%     if (min(diag(Y))<=1e-12)
-%         keyboard
-%     end
-
     end
 
  M.ehess2rhess = @(X, egrad, ehess, eta) error(['Hessian not ' ...

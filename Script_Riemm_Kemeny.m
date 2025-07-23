@@ -29,10 +29,28 @@ problem.M = M;
 problem.cost = @(X) trace((eye(n) - X + pv*pv')\eye(n)) + 0.5*norm(diag(pv.^(-1))*X*diag(pv) - B0,'fro')^2;
 problem.egrad = @(X) ((eye(n) - X + pv*pv')^2\eye(n))' + (diag(pi.^(-1))*X*diag(pi) - diag(pv.^(-1))*B0*diag(pv));
     
-options.tolgradnorm = 1e-12;
-options.linesearch = @linesearch_adaptive;
-options.verbosity = 0;
+options.tolgradnorm = 1e-3;
+% options.linesearch = @linesearch_adaptive;
+options.verbosity = 3;
+options.strategy = 'alternate';
+options.ls_nmsteps = 5;
 
-[X1, xcost, info, options] = conjugategradient(problem, B, options);
+% [X1, xcost, info, options] = conjugategradient(problem, B, options);
+[X1, xcost, info, options] = barzilaiborwein(problem, B, options);
+
+S2 = X1;
+S2(abs(S2)<1e-20) = 0;
+
+N = multinomialsparsesymmetricfixedfactory(pv,full(spones(S2)));
+problem.M = N;
+
+clear options
+options.tolgradnorm = 1e-12;
+options.verbosity = 3;
+options.strategy = 'alternate';
+options.ls_nmsteps = 5;
+
+[X1, xcost, info, options] = barzilaiborwein(problem, X1, options);
+
 
 Xs = diag(pv.^(-1))*X1*diag(pv);
