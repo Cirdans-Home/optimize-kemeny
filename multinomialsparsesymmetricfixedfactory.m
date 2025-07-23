@@ -15,7 +15,8 @@ function M = multinomialsparsesymmetricfixedfactory(pv, S)
 % Points on the manifold and tangent vectors are represented naturally as
 % matrices of size n.
 % S is a prescribed sparsity pattern, stored as a matrix of zeros and ones
-% Note that: we are assuming that 
+% Note that: we are assuming that it has always ones on the main diagonal
+% and it is symmetric
 
 n = length(pv);
 pi = pv.^2;
@@ -66,6 +67,8 @@ M.rand = @random;
        X = diag(u)*X*diag(v);
        X = 0.5*(X+X'); %probably we don't need it here
 
+        %keyboard
+
     end
 
 M.randvec = @randomvec;
@@ -96,8 +99,7 @@ M.proj = @projection;
         Dv = diag(pv);
         A = Dv*X*Dv + diag(X*Dv*pv);
         alpha = A\b;
-        etaproj = eta - (alpha*pv' + pv*alpha').*X; %miry 08/07
-
+        etaproj = eta - (alpha*pv' + pv*alpha').*X; 
    end
 
 M.tangent = M.proj;
@@ -127,23 +129,39 @@ M.retr = @retraction;
        if nargin < 3
            t = 1.0;
        end
-       %  Y = X.*exp(t*(eta./X));
- 
-      Y = X + t*eta;
 
-      %  Y = min(Y, 1e50); % For numerical stability
-      %  Y = max(Y, 1e-50); % For numerical stability
+        %nnz_X = X(index);
+        %if any(nnz_X(:)<0)
+         %   keyboard
+            %t = 1.0;
+        %end
+      
+       XX = X;
+       XX(XX==0) = 1;
+
+       Y = X.*exp(t*(eta./XX));
+       Y = Y.*S;
+
+        %if (min(diag(Y))<=1e-12)
+         % keyboard
+        %end
+
+    %  keyboard
+    %  Y = X + t*eta;
+    %  Y = max(Y, 1e-30); % For numerical stability;
+    %  Y = Y.*S;
 
     %Retraction con double_stoch_general di manopt
     Yr = diag(pv)*Y*diag(pv);
     [YYr, u, v]= my_doubly_stochastic_general(Yr, pi, pi, maxDSiters);
 
      Y = diag(u)*Y*diag(v);
-
      Y = Y.*S;
      Y = 0.5*(Y + Y');
 
-    %keyboard
+%     if (min(diag(Y))<=1e-12)
+%         keyboard
+%     end
 
     end
 
