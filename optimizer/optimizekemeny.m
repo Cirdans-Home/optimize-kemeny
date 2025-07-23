@@ -333,9 +333,9 @@ Dp = spdiags(sqp,0,n,n);
 Dpinv = spdiags(1./sqp,0,n,n);
 
 Q = I - Dp*(P+DeltaMat)*Dpinv + sqp*sqp';
-L = chol(Q);
+[L,D] = ldl(Q);
 
-INV1 = L'\(L\I);
+INV1 = L'\(D\(L\I));
 
 f = trace( INV1 ) + 0.5*norm(DeltaMat,"fro")^2;
 
@@ -418,8 +418,8 @@ Delta = sparse(irow,jcol,Delta,n,n);
 sqp = sqrt(pi);
 Dp = spdiags(sqp,0,n,n);
 Dpinv = spdiags(1./sqp,0,n,n);
-L = chol(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
-INV1 = L'\(L\I);
+[L,D] = ldl(I - Dp*(P+Delta)*Dpinv + sqp*sqp');
+INV1 = L'\(D\(L\I));
 GMAT = INV1*INV1;
 
 % Define the dimension n
