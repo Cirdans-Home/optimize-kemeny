@@ -31,12 +31,12 @@ for i = 1:length(tol)
      
     clear options;
     options.tolgradnorm = tol(i);
-    options.verbosity = 0;
-    options.strategy = 'alternate';
-    options.ls_nmsteps = 5;
-    
-    % [X1, xcost, info, options] = conjugategradient(problem, B, options);
-    [X1, xcost, info, options] = barzilaiborwein(problem, Bs, options);
+%   options.verbosity = 0;
+%   options.strategy = 'alternate';
+%   options.ls_nmsteps = 5;
+     
+    [X1, xcost, info, options] = conjugategradient(problem, Bs, options);
+    %[X1, xcost, info, options] = barzilaiborwein(problem, Bs, options);
 
     Sp = X1;
     Sp(abs(Sp)<1e-20) = 0;

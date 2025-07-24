@@ -1,7 +1,7 @@
 clear all; close all; clc
 rng(12)
 
-m = 5;
+m = 25;
 P1 = rand(m,m);
 P1 = diag(sum(P1,2))\P1;
 P2 = rand(m,m);
