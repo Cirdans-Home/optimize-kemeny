@@ -31,7 +31,7 @@ for i = 1:length(tol)
      
     clear options;
     options.tolgradnorm = tol(i);
-%   options.verbosity = 0;
+    options.verbosity = 0;
 %   options.strategy = 'alternate';
 %   options.ls_nmsteps = 5;
      

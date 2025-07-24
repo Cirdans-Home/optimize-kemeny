@@ -26,7 +26,9 @@ TT = eye(n) + A; %+ Pf^2;
 S = double(TT > 0);
 
 % %Riemannian optimization
+tic;
 [Xs, xcost] = optimizeriemm(A,pi,S);
+time_riemm = toc;
 
 %Additional checks on the Reversibility - RIEMANNIAN CASE
 norm(diag(pi)*Xs - Xs'*diag(pi))
@@ -35,26 +37,10 @@ norm(pi'*Xs - pi')
 
 fprintf("||Xs - A|| = %e\n", norm(Xs - A,"fro"));
 fprintf("New Kemeny vs Old Kemeny = %e %e\n", trace((eye(n) - Dv*Xs*(Dv^-1) + pv*pv')\eye(n)), trace((eye(n) - Dv*A*(Dv^-1) + pv*pv')\eye(n)));
- 
-% %Initialize the manifold
-% M = multinomialsparsesymmetricfixedfactory(pv,S);
-% 
-% Bhat = diag(pv.^(-1))*Pf*diag(pv); %Transform the matrix
-% B0 = Pf;
-% 
-% %Initialization of the problem
-% problem.M = M;
-% problem.cost = @(X) trace((eye(n) - X + pv*pv')\eye(n)) + 0.5*norm(diag(pv.^(-1))*X*diag(pv) - B0,'fro')^2;
-% problem.egrad = @(X) ((eye(n) - X + pv*pv')^2\eye(n))' + (diag(pi.^(-1))*X*diag(pi) - diag(pv.^(-1))*B0*diag(pv));
-% 
-% options.tolgradnorm = 1e-10;
-% options.verbosity = 0;
-% 
-% [X1, xcost, info, options] = conjugategradient(problem, [], options);
-% [X1, xcost, info, options] = steepestdescent(problem, [], options);
-% Xs = diag(pv.^(-1))*X1*diag(pv);
 
+tic;
 [Delta,varargout] = optimizekemeny(A, 'SparsePreserving', pi);
+time_fmin = toc;
 
 %Additional checks on the Reversibility - EUCLIDEAN CASE
 norm(diag(pi)*(A+Delta) - (A+Delta)'*diag(pi))
