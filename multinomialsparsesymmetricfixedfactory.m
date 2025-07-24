@@ -66,9 +66,6 @@ M.rand = @random;
         [XXr, u,v]= my_doubly_stochastic_general(Xr,pi,pi, maxDSiters);
        X = diag(u)*X*diag(v);
        X = 0.5*(X+X'); %probably we don't need it here
-
-        %keyboard
-
     end
 
 M.randvec = @randomvec;
@@ -132,11 +129,12 @@ M.retr = @retraction;
       
        XX = X;
        XX(XX==0) = 1;
+
        Y = X.*exp(t*(eta./XX));
        Y = Y.*S;
 
-    %  Y = X + t*eta;
-     Y = max(Y, 1e-17); % For numerical stability;
+    %Y = X + t*eta;
+     Y = max(Y, 1e-30); % For numerical stability;
      Y = Y.*S;
 
     %Retraction con double_stoch_general di manopt
