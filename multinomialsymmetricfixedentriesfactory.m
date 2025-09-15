@@ -81,10 +81,11 @@ M.rand = @random;
         % Projection of the vector onto the tangent space
         b = Z*pv;
         Dv = diag(pv);
-        A = Dv*X*Dv + diag(X*Dv*pv);
+        A = Dv*(S.*X)*Dv + diag((S.*X)*Dv*pv);
         
         alpha = A\b;
-        eta = Z - (alpha*pv' + pv*alpha').*X;
+        eta = Z - (alpha*pv' + pv*alpha').*(S.*X); 
+
 
         % Normalizing the vector
         nrm = M.norm(X, eta);
@@ -99,11 +100,13 @@ M.rand = @random;
         b = (eta)*pv;
 
         Dv = diag(pv);
-        A = Dv*X*Dv + diag(X*Dv*pv);
+        A = Dv*(S.*X)*Dv + diag((S.*X)*Dv*pv);
         alpha = A\b;
-        etaproj = eta - (alpha*pv' + pv*alpha').*X;
-
+        etaproj = eta - ((alpha*pv' + pv*alpha').*(S.*X));
    end
+
+   M.tangent = M.proj;
+   M.tangent2ambient = @(X, eta) eta;
 
     % Conversion of Euclidean to Riemannian gradient
 M.egrad2rgrad = @egrad2rgrad;
@@ -116,9 +119,9 @@ M.egrad2rgrad = @egrad2rgrad;
 
         b = mu*pv;
         Dv = diag(pv);
-        A = Dv*X*Dv + diag(X*Dv*pv);
+        A = Dv*(S.*X)*Dv + diag((S.*X)*Dv*pv);
         alpha = A\b;
-        rgrad = mu - (alpha*pv' + pv*alpha').*X;
+        rgrad = mu - ((alpha*pv' + pv*alpha').*(S.*X));
 
     end
 
