@@ -5,9 +5,11 @@
 clear all; close all; clc
 rng (19)
 
-size_m = 20;
-tests = 1; 
+size_m = 60;
+tests = 25; 
 dim = size_m.*ones(1,tests);
+
+index_nan=[];
 
 l = length(dim);
 
@@ -56,6 +58,11 @@ for i = 1:l
     new_kem(1,i) = trace((eye(n) - Dv*Xs_cg*(Dv^-1) + pv*pv')\eye(n));
     times(1,i) =  time_cg;
 
+    %check-FIXED ELEMENTS
+     if (max(max(abs(full(Xs_cg.*spones(P))-P)))>1e-15)
+            error('elements not fixed ');
+     end
+
     tic;
     [Xs_bb,cost_bb] = optimizeriemm(A,ps,S,2,P);
     time_bb = toc;
@@ -67,16 +74,27 @@ for i = 1:l
     new_kem(2,i) = trace((eye(n) - Dv*Xs_bb*(Dv^-1) + pv*pv')\eye(n));
     times(2,i) =  time_bb;
 
-    tic;
-    [Delta,varargout] = optimizekemeny(A, 'SparsePreserving', ps, spones(S));
-    time_eu = toc;
-    %Additional checks on the Reversibility - EUCLIDEAN CASE
-    rev(3,i) = norm(diag(ps)*(A+Delta) - (A+Delta)'*diag(ps),inf);
-    stoc(3,i) = norm((A+Delta)*ones(n,1) - ones(n,1),inf);
-    stat(3,i) = norm(ps'*(A+Delta) - ps',inf);
-    dist_rel(3,i) =  norm(Delta,"fro")/norm(A,"fro");
-    new_kem(3,i) = trace((eye(n) - Dv*(A+Delta)*(Dv^-1) + pv*pv')\eye(n));
-    times(3,i) =  time_eu;
+
+    %check-FIXED ELEMENTS
+    if (max(max(abs(full(Xs_bb.*spones(P))-P)))>1e-15)
+        error('elements not fixed ');
+    end
+
+    %check Nan in BB
+      if (isnan(Xs_bb))
+           index_nan = [index_nan; i];
+      end
+
+%     tic;
+%     [Delta,varargout] = optimizekemeny(A, 'SparsePreserving', ps, spones(S));
+%     time_eu = toc;
+%     %Additional checks on the Reversibility - EUCLIDEAN CASE
+%     rev(3,i) = norm(diag(ps)*(A+Delta) - (A+Delta)'*diag(ps),inf);
+%     stoc(3,i) = norm((A+Delta)*ones(n,1) - ones(n,1),inf);
+%     stat(3,i) = norm(ps'*(A+Delta) - ps',inf);
+%     dist_rel(3,i) =  norm(Delta,"fro")/norm(A,"fro");
+%     new_kem(3,i) = trace((eye(n) - Dv*(A+Delta)*(Dv^-1) + pv*pv')\eye(n));
+%     times(3,i) =  time_eu;
 end
 
-%save('test_60.mat', 'rev', 'stat', 'stoc', 'dist_rel', 'old_kem', 'new_kem','times')
+%save('fixed_60_riem.mat', 'rev', 'stat', 'stoc', 'dist_rel', 'old_kem', 'new_kem','times')
