@@ -250,11 +250,12 @@ if exist('assemble_hessian_sparse.mexa64','file') == 3
     hess = @(Delta,lambda) assemble_H_sparse_mex(Delta,lambda,P,pi,ival,jval);
 else
     fprintf("Using purely MATLAB Hessian.\n")
-    hess = @(Delta,lambda) assemble_H_sparse(Delta,lambda,P,pi,ival,jval);
+    hess = @(Delta,lambda) assemble_H_sparse(Delta,lambda,P,pi,ival,jval,m); %Changed 24/09
 end
 options = optimoptions('fmincon','Algorithm','interior-point',...
     'SpecifyObjectiveGradient',true,...  
     'HessianFcn',hess,... 'HessianApproximation','finite-difference',... 
+    "EnableFeasibilityMode",true,...
     'Display',verbose);
 x = eps*ones(m,1);
 sqp = sqrt(pi);
@@ -409,7 +410,7 @@ H = assemble_hessian(INV1,GMAT,n,sqp);
 
 end
 
-function H = assemble_H_sparse(Delta,~,P,pi,irow,jcol)
+function H = assemble_H_sparse(Delta,~,P,pi,irow,jcol,m) %Changed 24/09
 %ASSEMBLE_H builds the Hessian for the Kemeny's constant function
 
 n = size(P,1);
@@ -423,7 +424,8 @@ INV1 = L'\(D\(L\I));
 GMAT = INV1*INV1;
 
 % Define the dimension n
-nnzp = nnz(P);
+% nnzp = nnz(P); %Changed 24/09
+nnzp = m; %Changed 24/09
 H = zeros(nnzp, nnzp);  % Initialize the matrix H of size m x m
 
 % Nested loops to fill the H matrix
