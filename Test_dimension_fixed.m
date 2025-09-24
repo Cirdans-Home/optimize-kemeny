@@ -85,16 +85,23 @@ for i = 1:l
            index_nan = [index_nan; i];
       end
 
-%     tic;
-%     [Delta,varargout] = optimizekemeny(A, 'SparsePreserving', ps, spones(S));
-%     time_eu = toc;
-%     %Additional checks on the Reversibility - EUCLIDEAN CASE
-%     rev(3,i) = norm(diag(ps)*(A+Delta) - (A+Delta)'*diag(ps),inf);
-%     stoc(3,i) = norm((A+Delta)*ones(n,1) - ones(n,1),inf);
-%     stat(3,i) = norm(ps'*(A+Delta) - ps',inf);
-%     dist_rel(3,i) =  norm(Delta,"fro")/norm(A,"fro");
-%     new_kem(3,i) = trace((eye(n) - Dv*(A+Delta)*(Dv^-1) + pv*pv')\eye(n));
-%     times(3,i) =  time_eu;
+    tic;
+    [Delta,varargout] = optimizekemeny(A, 'SparsePreserving', ps, spones(S));
+    time_eu = toc;
+    %Additional checks on the Reversibility - EUCLIDEAN CASE
+    rev(3,i) = norm(diag(ps)*(A+Delta) - (A+Delta)'*diag(ps),inf);
+    stoc(3,i) = norm((A+Delta)*ones(n,1) - ones(n,1),inf);
+    stat(3,i) = norm(ps'*(A+Delta) - ps',inf);
+    dist_rel(3,i) =  norm(Delta,"fro")/norm(A,"fro");
+    new_kem(3,i) = trace((eye(n) - Dv*(A+Delta)*(Dv^-1) + pv*pv')\eye(n));
+    times(3,i) =  time_eu;
+
+
+    %check-FIXED ELEMENTS
+    if (max(max(abs(full((A+Delta).*spones(P))-P)))>1e-15)
+        error('elements not fixed ');
+    end
+
 end
 
-%save('fixed_60_riem.mat', 'rev', 'stat', 'stoc', 'dist_rel', 'old_kem', 'new_kem','times')
+save('fixed_60.mat', 'rev', 'stat', 'stoc', 'dist_rel', 'old_kem', 'new_kem','times')
