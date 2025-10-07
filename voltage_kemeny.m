@@ -3,7 +3,19 @@ clear all; close all; clc
 
 load('voltage_adjacencies_average_2.mat')
 
+%SWITZERLAND -- Irreducible Example
 A = Switzerland;
+
+
+% % Other countries -- Reducible examples
+%  AA = Netherlands;
+%  G = graph(AA);
+%  [bins,binsize] = G.conncomp("OutputForm","vector");
+% 
+%  [max_size,max_i] = max(binsize);
+% 
+%  A = AA(bins == max_i,bins == max_i);
+
 n = size(A,1);
 
 d = sum(A,2);

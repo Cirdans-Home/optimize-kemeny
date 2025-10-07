@@ -3,7 +3,6 @@ function M = multinomialsymmetricfixedentriesfactory(pv, S, P)
 % fixed left-hand stochastic eigenvector
 % with an additional (symmetric) sparsity pattern
 % and fixed entries of a given reversible matrix, contained in P
-% function M = multinomialsparseymmetricfixedfactory(n,pv)
 %
 % M is a Manopt manifold structure to optimize over the set of n-by-n
 % matrices with nonnegative entries and such that the elements X
@@ -23,6 +22,12 @@ function M = multinomialsymmetricfixedentriesfactory(pv, S, P)
 n = length(pv);
 pi = pv.^2;
 maxDSiters = 3000 + 2*n;
+
+%Check if the set has more than one element
+sum_check = sum(P,2);
+if (abs(max(sum_check)-1)<=1e-15)
+    error('only one element in the manifold');
+end
 
 %S encodes the sparsity pattern and must contain the main diagonal
 [I,J] = find(S);
