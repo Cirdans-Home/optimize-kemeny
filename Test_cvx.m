@@ -14,6 +14,16 @@
 
 clear; clc; close all;
 
+try
+    fprintf("Manopt version %d.%d.%d",manopt_version);
+catch
+    cd manopt/ 
+    importmanopt
+    cd ..
+    fprintf("Manopt version %d.%d.%d",manopt_version);
+end
+addpath('optimizer/');
+
 n = 30;
 %Initialize the stochastic matrix and its stationary distribution
 ps = rand(n,1);
@@ -28,6 +38,7 @@ E = E + E' + eye(n);
 N = multinomialsparsesymmetricfixedfactory(pv,E);
 A = N.rand(); %symmetric and fixed eigenvector pv
 A =  diag(pv.^(-1))*A*diag(pv); %this is reversible (stochastic)
+eucA = A;
 
 old_kem = trace((eye(n) - Dv*A*(Dv^-1) + pv*pv')\eye(n));
 
@@ -116,3 +127,19 @@ fprintf("Relative Distance from the original chain: %e\n",norm(Popt - A,"fro")/n
 fprintf("Reversibility: %e\n", norm(diag(pi)*Popt - Popt'*diag(pi),inf));
 fprintf("Stochasticity: %e\n", norm(Popt*ones(n,1) - ones(n,1),inf));
 fprintf("Stationarity: %e\n", norm(pi'*Popt - pi',inf));
+
+%% Euclidean Optimizer
+
+tic;
+[Delta_euc,info_euc] = optimizekemeny(eucA,...
+    'type','SparsePreserving',...
+    'stationary',pi);
+time_euclidean = toc;
+
+Peuc = eucA + Delta_euc;
+% Display results from Euclidean optimization
+fprintf("Euclidean case")
+fprintf("Kemeny constant from Euclidean optimizer: %e\n", trace((eye(n) - Dv*Peuc*(Dv^-1) + pv*pv')\eye(n)));
+fprintf("Reversibility: %e\n", norm(diag(pi)*Peuc - Peuc'*diag(pi),inf));
+fprintf("Stochasticity: %e\n", norm(Peuc*ones(n,1) - ones(n,1),inf));
+fprintf("Stationarity: %e\n", norm(pi'*Peuc - pi',inf));
